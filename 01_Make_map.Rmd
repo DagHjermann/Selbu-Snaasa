@@ -1,0 +1,184 @@
+---
+title: "Kart for Selbusjøen og Snåsavatn"
+output: html_notebook
+---
+
+Making maps for the lakes Selbusjøen and Snåsavatn. For Susi, June 2018.  
+
+
+# Preparation
+## Libraries and functions
+```{r}
+library(tidyverse)
+library(readxl)
+library(leaflet)
+source("31_map_leaflet_kartverket_cached_functions.R")
+```
+
+```{r}
+rename_partial <- function(df, oldname, newname, ignore.case = TRUE, ...){
+  i <- grep(oldname, colnames(df), ignore.case = ignore.case, ...) 
+  if (length(i) == 0){
+    cat("Column", oldname, "not found\n")
+  } else if (length(i) == 1){
+    colnames(df)[i] <- newname
+  } else {
+    cat(length(i), "columns found\n")
+  }
+  df
+}
+```
+
+## Data
+```{r}
+df_sites <- read_excel("Data/sites_large_lakes_benthic algae.xlsx")
+df_sites <- df_sites %>% 
+  rename_partial(oldname = "Ø", newname = "UTM_x") %>%
+  rename_partial(oldname = "32 N", newname = "UTM_y") %>%
+  rename(lat = `decimals (google maps)`, long = `decimals (google maps)__1`) %>%
+  mutate(lake = ifelse(grepl("Snåsavatnet", site), "Snåsavatn", "Selbusjøen"))
+```
+
+```{r}
+ggplot(df_sites, aes(long, lat)) +
+  geom_point() +
+  facet_wrap(~lake, scales = "free")
+```
+```{r}
+df_sites %>% 
+  group_by(lake) %>%
+  select(long, lat) %>%
+  summarize_all(mean) %>%
+  as.data.frame()
+```
+
+
+# Snåsa
+## Test
+```{r}
+makemap_topo4("Html/Snåsa_test.html", center_lat = 64.18, center_long = 11.97, zoom = 9)
+```
+
+## Site map
+```{r}
+# Select points and arrange so column 1 = latitude amnd column 2 = longitude (default of add_circleMarkers function)
+df <- df_sites %>% 
+  filter(lake %in% "Snåsavatn") %>%
+  select(lat, long)
+
+# topo4
+# norges_grunnkart
+# terreng_norgeskart
+# norges_grunnkart_graatone
+# eg
+
+cx <- 11.97
+cy <- 64.18
+# debugonce(add_circleMarkers)
+
+# Note: For just testing/experimenting, use view_html() instead of write_html()
+#       Tip: decrease height and width to make it better fit into the RStudio Viewr window 
+interactive <- FALSE
+# interactive <- TRUE
+if (interactive){
+  kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                   height = 700, width = 1000, layer = "topo4") %>%
+    add_circleMarkers(df, radius = 7) %>% 
+    view_html()
+}
+
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "topo4") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Snåsa_sites_topo4.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "norges_grunnkart") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Snåsa_sites_grunnkart.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "terreng_norgeskart") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Snåsa_sites_terreng.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "norges_grunnkart_graatone") %>%
+  add_circleMarkers(df, radius = 7, color = "#ED3F42") %>% 
+  write_html("Html/Snåsa_sites_grunnkartgrå.html")
+```
+
+# Selbusjøen
+## Site map
+```{r}
+# Select points and arrange so column 1 = latitude amnd column 2 = longitude (default of add_circleMarkers function)
+df <- df_sites %>% 
+  filter(lake %in% "Selbusjøen") %>%
+  select(lat, long)
+
+# topo4
+# norges_grunnkart
+# terreng_norgeskart
+# norges_grunnkart_graatone
+# eg
+
+cx <- 10.85
+cy <- 63.25
+# debugonce(add_circleMarkers)
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "topo4") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Selbu_sites_topo4.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "norges_grunnkart") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Selbu_sites_grunnkart.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "terreng_norgeskart") %>%
+  add_circleMarkers(df, radius = 7) %>% 
+  write_html("Html/Selbu_sites_terreng.html")
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 11, 
+                 height = 1000, width = 1400, layer = "norges_grunnkart_graatone") %>%
+  add_circleMarkers(df, radius = 7, color = "#ED3F42") %>% 
+  write_html("Html/Selbu_sites_grunnkartgrå.html")
+```
+
+# Overview map
+```{r}
+surrounding_rectangle <- function(data){
+  df <- data %>%
+    summarise(y1 = min(lat), x1 = min(long), y2 = max(lat), x2 = max(long)) %>%
+    as.data.frame()
+  data.frame(y = c(df[1,]$y1, df[1,]$y1, df[1,]$y2, df[1,]$y2),
+             x = c(df[1,]$x1, df[1,]$x2, df[1,]$x2, df[1,]$x1))
+  }
+rect_1 <- df_sites %>% filter(lake %in% "Snåsavatn") %>% surrounding_rectangle
+rect_2 <- df_sites %>% filter(lake %in% "Selbusjøen") %>% surrounding_rectangle
+# For Selbusjøen, increase y range by 100%
+dy <- diff(range(rect_2$y)) 
+rect_2$y[1:2] <- rect_2$y[1:2] - dy/2
+rect_2$y[3:4] <- rect_2$y[3:4] - dy/2
+```
+
+## Version 1, rectangles
+```{r}
+# debugonce(add_polygon)
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 7, 
+                 height = 1000, width = 1400, layer = "topo4") %>%
+  add_polygon(rect_1, color = "#377eb8", weight = 5) %>% 
+  add_polygon(rect_2, color = "#ED3F42", weight = 5) %>% 
+  write_html("Html/Overview_1.html")
+```
+
+## Version 2, circles
+```{r}
+centres <- df_sites %>% 
+  group_by(lake) %>%
+  select(lake, lat, long) %>%
+  summarize_all(mean)
+# debugonce(make_html)
+kartverket_topo4(center_lat = cy, center_long = cx, zoom = 7, 
+                 height = 1000, width = 1400, layer = "topo4") %>%
+  add_circleMarkers(centres[1,2:3], radius = 22, color = "#ED3F42", stroke = TRUE, fillOpacity = 0) %>% 
+  add_circleMarkers(centres[2,2:3], radius = 22, color = "#377eb8", stroke = TRUE, fillOpacity = 0) %>% 
+  write_html("Html/Overview_2.html")
+```
+
+

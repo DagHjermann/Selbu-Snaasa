@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>Kartverkets kart</title>
+
+        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.0.1/dist/leaflet.css' />
+
+        
+        <script src='https://unpkg.com/leaflet@1.0.1/dist/leaflet.js'></script>
+    </head>
+    <body>
+      <div id='map' style='height: 1000px; width: 1400px;'></div>
+      <script>
+        var map = L.map('map').setView([63.25000,10.85000], 7);
+        L.tileLayer('http://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=topo4&zoom={z}&x={x}&y={y}', {
+            attribution: 'Kartverket'
+        }).addTo(map);
+        var marker = L.polygon([[64.09417,11.57222],[64.09417,12.36778],[64.26333,12.36778],[64.26333,11.57222]], {
+weight: 5,
+stroke: true,
+fill: false,
+color: '#377eb8',
+opacity: 1.00
+}).addTo(map);
+        var marker = L.polygon([[63.19125,10.50722],[63.19125,11.09333],[63.24931,11.09333],[63.24931,10.50722]], {
+weight: 5,
+stroke: true,
+fill: false,
+color: '#ED3F42',
+opacity: 1.00
+}).addTo(map);
+       </script>
+    </body>
+</html>
